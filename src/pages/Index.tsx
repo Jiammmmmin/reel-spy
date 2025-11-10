@@ -27,31 +27,24 @@ const Index = () => {
     setQueriedObjectName(objectName);
 
     try {
-      let query = supabase
-        .from("objects")
-        .select("*")
-        .eq("video_id", parseInt(videoId))
-        .order("timestamp", { ascending: true });
-
-      if (objectName) {
-        query = query.eq("object_name", objectName);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await supabase.functions.invoke('query-aws-rds', {
+        body: { videoId: parseInt(videoId), objectName }
+      });
 
       if (error) throw error;
+      if (data.error) throw new Error(data.error);
 
-      setObjects(data || []);
+      setObjects(data.data || []);
 
       toast({
         title: "Query successful",
-        description: `Found ${data?.length || 0} object(s)`,
+        description: `Found ${data.data?.length || 0} object(s)`,
       });
     } catch (error) {
       console.error("Error querying objects:", error);
       toast({
         title: "Query failed",
-        description: "Failed to retrieve objects. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to retrieve objects. Please try again.",
         variant: "destructive",
       });
       setObjects([]);
